@@ -1,36 +1,39 @@
 <template>
   <div class="input-block">
     <div>
-      <label for="ticker-name">Ticker {{ ticker }}</label>
+      <label for="ticker-name">Ticker: {{ ticker }}</label>
       <div style="margin= .5rem">
         <input
           v-model="ticker"
+          @keydown.enter="add()"
           type="text"
           id="ticker-name"
           class="ticker-input"
-          maxlength="4"
+          maxlength="8"
         />
       </div>
     </div>
     <div>
-      <button class="ticker-btn"><div>Add ticker</div></button>
+      <button class="ticker-btn" @click="add()"><div>Add ticker</div></button>
     </div>
   </div>
-  <hr />
-    <div class="crypto-block">
-      <div v-for="crypto of tickers" :key="crypto.name">
-        <div class="currency-name">
-          {{crypto.name}} to USD
-        </div>
-        <div class="currency-value">
-          {{crypto.value}} 
-        </div>
-        <div>
-          <button class="crypto-delete">Delete</button>
+  <template v-if="tickers.length">
+    <hr />
+      <div class="crypto-block">
+        <div v-for="crypto of tickers" :key="crypto.name">
+          <div class="currency-name">
+            {{crypto.name}} to USD
+          </div>
+          <div class="currency-value">
+            {{crypto.value}} 
+          </div>
+          <div>
+            <button class="crypto-delete" @click="deleteTicker(crypto)">Delete</button>
+          </div>
         </div>
       </div>
-    </div>
-  <hr />
+    <hr />
+  </template>
 </template>
 
 <script>
@@ -39,14 +42,26 @@ export default {
   data() {
     return {
       ticker: "",
-      tickers: [
-        {name: "BTC", value: "-"},
-        {name: "DOGE", value: "-"},
-        {name: "ETH", value: "-"},
-        {name: "TESLA", value: "-"}
-      ]
+      tickers: []
     };
   },
+
+  methods: {
+    add() {
+      if (this.ticker.trim()) {
+        const newTicker = {
+          name: this.ticker,
+          value: "-"
+        }
+          this.tickers.push(newTicker)
+        }
+      this.ticker = ""
+    },
+
+    deleteTicker(value) {
+      this.tickers = this.tickers.filter((crypto) => crypto != value)
+    }
+  }
 };
 </script>
 
@@ -137,5 +152,9 @@ button {
   color: grey;
   background-color: transparent;
   border-color: transparent;
+  transition: text-decoration 0.3s ease-in-out;
+}
+.crypto-delete:hover {
+  text-decoration: underline;
 }
 </style>
