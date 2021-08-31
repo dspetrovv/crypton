@@ -1,7 +1,7 @@
 <template>
   <div class="input-block">
     <div>
-      <label for="ticker-name">Ticker: {{ ticker }}</label>
+      <label for="ticker-name">Ticker</label>
       <div style="margin= .5rem; width: 20vw;">
         <input
           v-model="ticker"
@@ -22,7 +22,7 @@
             <button
               class="button-helper"
               :title="coinSymbol.FullName"
-              @click="add()"
+              @click="add(coinSymbol.FullName)"
             >
               {{ coinSymbol.Symbol }}
             </button>
@@ -30,14 +30,18 @@
         </div>
       </template>
     </div>
+    <div
+      class="input-error-block"
+      v-if="inputError"
+    >{{ inputError }}</div>
     <div>
       <button class="ticker-btn" @click="add()"><div>Add ticker</div></button>
     </div>
   </div>
-  <template v-if="tickers.length">
+  <template v-if="cryptoCoins.length">
     <hr />
       <div class="crypto-block">
-        <div v-for="crypto of tickers" :key="crypto.name">
+        <div v-for="crypto of cryptoCoins" :key="crypto.name">
           <div class="currency-name">
             {{crypto.name}} to USD
           </div>
@@ -59,38 +63,70 @@ export default {
   data() {
     return {
       ticker: "",
-      tickers: [],
-      cryptoNames: [[],[],[],[],[],[],[],[],[]],
-      similarCoins: []
+      cryptoCoins: [],
+      cryptoCoinList: [[],[],[],[],[],[],[],[],[]],
+      similarCoins: [],
+      inputError: ''
     };
   },
 
   created: async function() {
     const crypts = await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true')
     const json = await crypts.json()
-    const cryptoData = []
     for (let cryptoInfo in json.Data) {
-      cryptoData.push(json.Data[cryptoInfo])
       const idx = this.checkRegExp(json.Data[cryptoInfo].Symbol[0])
-      this.cryptoNames[idx].push(json.Data[cryptoInfo])
+      this.cryptoCoinList[idx].push(json.Data[cryptoInfo])
     }
-    this.cryptoCoinList = cryptoData
   },
 
   methods: {
-    add() {
-      if (this.ticker.trim()) {
-        const newTicker = {
-          name: this.ticker,
+    add(coin = '') {
+      let currentInput = this.ticker.trim()
+      if (currentInput && this.similarCoins.length > 0) {
+        coin = this.checkIfCoinExists(coin, currentInput)
+        if (!coin) {
+          this.inputError = "Error! The coin '" + this.ticker + "' doesn't exist"
+          return;
+        }
+        for (let choosenCoin of this.cryptoCoins){
+          if (choosenCoin.name == coin) {
+            this.inputError = "Error! You already chose '" + coin + "' coin"
+            return;
+          }
+        }
+        const newCoin = {
+          name: coin,
           value: "-"
         }
-          this.tickers.push(newTicker)
-        }
-      this.ticker = ""
+        this.cryptoCoins.push(newCoin)
+        this.ticker = ""
+        this.similarCoins = []
+        this.inputError = ''
+      } else {
+        this.inputError = currentInput.length > 0 ? 
+        "Error! The coin '" + this.ticker + "' doesn't exist"
+        : "Error! Field 'Coin' cannot be empty"
+      }
     },
 
     deleteTicker(value) {
-      this.tickers = this.tickers.filter((crypto) => crypto != value)
+      this.cryptoCoins = this.cryptoCoins.filter((crypto) => crypto != value)
+    },
+
+    checkIfCoinExists(coin, currentInput) {
+      if (coin == '') {
+        const idx = this.checkRegExp(currentInput[0])
+        for (let cryptoCoin of this.cryptoCoinList[idx]) {
+          if (
+            cryptoCoin.FullName.toUpperCase() == currentInput.toUpperCase()
+            || cryptoCoin.Symbol.toUpperCase() == currentInput.toUpperCase()
+            ) {
+            coin = cryptoCoin.FullName
+            break
+          }
+        }
+      }
+      return coin
     },
 
     checkRegExp(str) {
@@ -117,11 +153,13 @@ export default {
     
     findSimilar() {
       this.similarCoins = []
-      let currentInput = this.ticker.trim();
+      this.inputError = ''
+      let currentInput = this.ticker.trim()
+      console.log('currentInput',currentInput)
       if (currentInput.length > 0) {
         const idx = this.checkRegExp(currentInput[0])
-        for (let coin of this.cryptoNames[idx]) {
-          if (coin.FullName.toUpperCase().includes(this.ticker.toUpperCase())) {
+        for (let coin of this.cryptoCoinList[idx]) {
+          if (coin.FullName.toUpperCase().includes(currentInput.toUpperCase())) {
             this.similarCoins.push(coin)
           }
           if (this.similarCoins.length == 4)
@@ -159,7 +197,6 @@ button {
   align-items: flex-start;
 }
 .input-block > div {
-  width: 30vw;
   text-align: start;
   margin: 0.4rem;
 }
@@ -210,9 +247,15 @@ button {
   color: white;
   background-color: rgb(64, 75, 87);
   border: 1px solid rgba(64, 75, 87, .8);
+  transition: background-color 0.1s ease-in-out;
 }
 .button-helper:hover {
   background-color: rgba(64, 75, 87, 0.9);
+}
+
+.input-error-block {
+  color: red;
+  font-size: 18px;
 }
 
 .crypto-block {
@@ -229,12 +272,14 @@ button {
 }
 
 .currency-name {
+  height: 30%;
   padding: .4rem 0;
   text-transform: uppercase;
   color: gray;
   font-size: 15px;
 }
 .currency-value {
+  height: 30%;
   font-size: 25px;
   font-weight: 600;
   padding: .3rem 0;
