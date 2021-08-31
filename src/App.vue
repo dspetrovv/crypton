@@ -2,16 +2,33 @@
   <div class="input-block">
     <div>
       <label for="ticker-name">Ticker: {{ ticker }}</label>
-      <div style="margin= .5rem">
+      <div style="margin= .5rem; width: 20vw;">
         <input
           v-model="ticker"
           @keydown.enter="add()"
+          @input="findSimilar()"
           type="text"
           id="ticker-name"
           class="ticker-input"
           maxlength="8"
         />
       </div>
+      <template v-if="similarCoins.length">
+        <div class="input-helper">
+          <div
+            v-for="coinSymbol of similarCoins"
+            :key="coinSymbol.Symbol"
+          >
+            <button
+              class="button-helper"
+              :title="coinSymbol.FullName"
+              @click="add()"
+            >
+              {{ coinSymbol.Symbol }}
+            </button>
+          </div>
+        </div>
+      </template>
     </div>
     <div>
       <button class="ticker-btn" @click="add()"><div>Add ticker</div></button>
@@ -42,8 +59,22 @@ export default {
   data() {
     return {
       ticker: "",
-      tickers: []
+      tickers: [],
+      cryptoNames: [[],[],[],[],[],[],[],[],[]],
+      similarCoins: []
     };
+  },
+
+  created: async function() {
+    const crypts = await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true')
+    const json = await crypts.json()
+    const cryptoData = []
+    for (let cryptoInfo in json.Data) {
+      cryptoData.push(json.Data[cryptoInfo])
+      const idx = this.checkRegExp(json.Data[cryptoInfo].Symbol[0])
+      this.cryptoNames[idx].push(json.Data[cryptoInfo])
+    }
+    this.cryptoCoinList = cryptoData
   },
 
   methods: {
@@ -60,6 +91,44 @@ export default {
 
     deleteTicker(value) {
       this.tickers = this.tickers.filter((crypto) => crypto != value)
+    },
+
+    checkRegExp(str) {
+      if (/[A-D]+/gi.test(str)) {
+        return 0
+      } else if (/[E-H]+/gi.test(str)) {
+        return 1
+      } else if (/[I-L]+/gi.test(str)) {
+        return 2
+      } else if (/[M-P]+/gi.test(str)) {
+        return 3
+      } else if (/[Q-T]+/gi.test(str)) {
+        return 4
+      } else if (/[U-X]+/gi.test(str)) {
+        return 5
+      } else if (/[Y-Z]+/gi.test(str)) {
+        return 6
+      } else if (/[0-4]+/gi.test(str)) {
+        return 7
+      } else if (/[5-9$]+/gi.test(str)) {
+        return 8
+      }
+    },
+    
+    findSimilar() {
+      this.similarCoins = []
+      let currentInput = this.ticker.trim();
+      if (currentInput.length > 0) {
+        const idx = this.checkRegExp(currentInput[0])
+        for (let coin of this.cryptoNames[idx]) {
+          if (coin.FullName.toUpperCase().includes(this.ticker.toUpperCase())) {
+            this.similarCoins.push(coin)
+          }
+          if (this.similarCoins.length == 4)
+            break
+        }
+      }
+      console.log('similar: ',this.similarCoins)
     }
   }
 };
@@ -90,13 +159,13 @@ button {
   align-items: flex-start;
 }
 .input-block > div {
+  width: 30vw;
   text-align: start;
   margin: 0.4rem;
 }
 .ticker-input {
   padding: 0.3rem;
   font-size: 22px;
-  width: 20vw;
   display: block;
   border-width: 0 0 1px 0;
   border-color: rgb(64, 75, 87);
@@ -104,7 +173,7 @@ button {
 }
 .ticker-input:focus,
 .ticker-input:hover {
-  border-color: rgb(64, 75, 87, 0.5);
+  border-color: rgba(64, 75, 87, 0.5);
 }
 .ticker-btn {
   padding: 0.4rem;
@@ -115,9 +184,35 @@ button {
   transition: background-color 0.3s, border-color 0.3s ease-in-out;
 }
 .ticker-btn:hover {
-  background-color: rgb(255, 0, 255, 0.8);
+  background-color: rgba(255, 0, 255, 0.8);
   border-color: rgb(255, 0, 255);
   color: white;
+}
+
+.input-helper {
+  width: 100%;
+  font-size: 15px;
+  padding: .3rem;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.input-helper > div {
+  flex: 0 0 15%;
+  text-align: center;
+  margin-left: .2rem;
+  border: 1px solid #000;
+  border-radius: 10%;
+}
+.button-helper {
+  width: 100%;
+  color: white;
+  background-color: rgb(64, 75, 87);
+  border: 1px solid rgba(64, 75, 87, .8);
+}
+.button-helper:hover {
+  background-color: rgba(64, 75, 87, 0.9);
 }
 
 .crypto-block {
@@ -131,9 +226,6 @@ button {
   padding: 1rem 0;
   margin: .4rem;
   border: 1px solid #000;
-}
-.crypto-block:first-child {
-  flex-grow: 1;
 }
 
 .currency-name {
