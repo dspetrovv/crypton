@@ -39,21 +39,41 @@
     </div>
   </div>
   <template v-if="cryptoCoins.length">
-    <hr />
-      <div class="crypto-block">
-        <div v-for="crypto of cryptoCoins" :key="crypto.name">
-          <div class="currency-name">
-            {{crypto.name}} to USD
-          </div>
-          <div class="currency-value">
-            {{crypto.value}} 
-          </div>
-          <div>
-            <button class="crypto-delete" @click="deleteTicker(crypto)">Delete</button>
+    <div class="input-block">
+      <div style="margin= .5rem; width: 20vw; font-size: 18px;">
+        Фильтры:
+        <input v-model="filter" type="text" class="input-filter"/>
+      </div>
+    </div>
+    <template v-if="filteredCoins().length">
+      <hr/>
+        <div class="crypto-block">
+          <div v-for="crypto of filteredCoins()" :key="crypto.name">
+            <div class="currency-name">
+              {{crypto.name}} to USD
+            </div>
+            <div class="currency-value">
+              {{crypto.value}} 
+            </div>
+            <div>
+              <button class="crypto-delete" @click="deleteTicker(crypto)">Delete</button>
+            </div>
           </div>
         </div>
-      </div>
-    <hr />
+      <hr />
+    </template>
+    <div>
+      <button
+        v-if="page > 1"
+        class="pagination-button"
+        @click="page = page - 1"
+      >Back</button>
+      <button
+        v-if="filtered.length > filteredCoins().length+((page-1)*3)"
+        class="pagination-button"
+        @click="page = page + 1"
+      >Next</button>
+    </div>
   </template>
 </template>
 
@@ -63,9 +83,13 @@ export default {
   data() {
     return {
       ticker: "",
+      filter: "",
+      coinsOnPage: 0,
+      page: 1,
       cryptoCoins: [],
       cryptoCoinList: [[],[],[],[],[],[],[],[],[]],
       similarCoins: [],
+      filtered: 0,
       inputError: ''
     };
   },
@@ -80,6 +104,14 @@ export default {
   },
 
   methods: {
+    filteredCoins() {
+      const start = (this.page - 1) * 3;
+      const end = this.page * 3;
+      const filtered = this.cryptoCoins.filter(coin => coin.name.toUpperCase().includes(this.filter.toUpperCase()))
+      this.filtered = filtered
+      return filtered.slice(start,end)
+    },
+
     add(coin = '') {
       let currentInput = this.ticker.trim()
       if (currentInput && this.similarCoins.length > 0) {
@@ -91,6 +123,7 @@ export default {
         for (let choosenCoin of this.cryptoCoins){
           if (choosenCoin.name == coin) {
             this.inputError = "Error! You already chose '" + coin + "' coin"
+            this.ticker = coin
             return;
           }
         }
@@ -167,6 +200,15 @@ export default {
         }
       }
       console.log('similar: ',this.similarCoins)
+    }
+  },
+
+  watch: {
+    filter() {
+      this.page = 1
+    },
+    page() {
+      this.filteredCoins()
     }
   }
 };
@@ -253,6 +295,18 @@ button {
   background-color: rgba(64, 75, 87, 0.9);
 }
 
+.input-filter {
+  padding: 0.3rem;
+  font-size: 16px;
+  display: block;
+  border: 2px solid rgb(29, 179, 104);
+  transition: border-color 0.1s ease-in-out;
+}
+.input-filter:focus,
+.input-filter:hover {
+  border-color: rgba(29, 179, 104, 0.5);
+}
+
 .input-error-block {
   color: red;
   font-size: 18px;
@@ -293,5 +347,19 @@ button {
 }
 .crypto-delete:hover {
   text-decoration: underline;
+}
+
+.pagination-button {
+  padding: .4rem;
+  font-size: 18px;
+  margin: 0 1rem;
+  background-color: transparent;
+  border: 1px solid rgb(40, 7, 161);
+  transition: border-color 0.3s, background-color 0.3s, color 0.3s ease-in-out;
+}
+.pagination-button:hover {
+  border-color: rgba(40, 7, 161, 0.5);
+  background-color: rgb(40, 7, 161);
+  color: white;
 }
 </style>
