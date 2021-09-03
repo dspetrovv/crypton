@@ -45,10 +45,10 @@
         <input v-model="filter" type="text" class="input-filter"/>
       </div>
     </div>
-    <template v-if="filteredCoins().length">
+    <template v-if="filteredCoins.length">
       <hr/>
         <div class="crypto-block">
-          <div v-for="crypto of filteredCoins()" :key="crypto.name">
+          <div v-for="crypto of filteredCoins" :key="crypto.name">
             <div class="currency-name">
               {{crypto.name}} to USD
             </div>
@@ -69,7 +69,7 @@
         @click="page = page - 1"
       >Back</button>
       <button
-        v-if="filtered.length > filteredCoins().length+((page-1)*3)"
+        v-if="filteredLength > filteredCoins.length+((page-1)*3)"
         class="pagination-button"
         @click="page = page + 1"
       >Next</button>
@@ -84,12 +84,10 @@ export default {
     return {
       ticker: "",
       filter: "",
-      coinsOnPage: 0,
       page: 1,
       cryptoCoins: [],
       cryptoCoinList: [[],[],[],[],[],[],[],[],[]],
       similarCoins: [],
-      filtered: 0,
       inputError: ''
     };
   },
@@ -101,17 +99,35 @@ export default {
       const idx = this.checkRegExp(json.Data[cryptoInfo].Symbol[0])
       this.cryptoCoinList[idx].push(json.Data[cryptoInfo])
     }
+    const cryptoList = localStorage.getItem('crypto-list')
+    if (cryptoList) {
+      this.cryptoCoins = JSON.parse(cryptoList)
+    }
+  },
+
+  computed: {
+    start() {
+      return (this.page - 1) * 3
+    },
+
+    end() {
+      return this.page * 3
+    },
+
+    filtered() {
+      return this.cryptoCoins.filter(coin => coin.name.toUpperCase().includes(this.filter.toUpperCase()))
+    },
+
+    filteredLength() {
+      return this.filtered.length
+    },
+
+    filteredCoins() {
+      return this.filtered.slice(this.start,this.end)
+    },
   },
 
   methods: {
-    filteredCoins() {
-      const start = (this.page - 1) * 3;
-      const end = this.page * 3;
-      const filtered = this.cryptoCoins.filter(coin => coin.name.toUpperCase().includes(this.filter.toUpperCase()))
-      this.filtered = filtered
-      return filtered.slice(start,end)
-    },
-
     add(coin = '') {
       let currentInput = this.ticker.trim()
       if (currentInput && this.similarCoins.length > 0) {
@@ -131,7 +147,9 @@ export default {
           name: coin,
           value: "-"
         }
-        this.cryptoCoins.push(newCoin)
+        //Watch
+        this.cryptoCoins = [...this.cryptoCoins,newCoin]
+        localStorage.setItem('crypto-list',JSON.stringify(this.cryptoCoins))
         this.ticker = ""
         this.similarCoins = []
         this.inputError = ''
@@ -204,11 +222,21 @@ export default {
   },
 
   watch: {
+    filteredCoins() {
+      if (this.filteredCoins.length == 0 && this.page > 1)
+        this.page -= 1
+    },
+
+    cryptoCoins() {
+      localStorage.setItem('crypto-list', JSON.stringify(this.cryptoCoins))
+    },
+
     filter() {
       this.page = 1
     },
+
     page() {
-      this.filteredCoins()
+      this.filteredCoins
     }
   }
 };
